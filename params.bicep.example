@@ -1,0 +1,57 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "baseName": {
+      "value": "cortex-jira-sync"
+    },
+    "cortexBaseUrl": {
+      "value": "https://api-YOURORG.xdr.us.paloaltonetworks.com"
+    },
+    "cortexApiKey": {
+      "value": "YOUR_CORTEX_API_KEY"
+    },
+    "cortexApiKeyId": {
+      "value": "YOUR_CORTEX_KEY_ID"
+    },
+    "cortexConsoleUrl": {
+      "value": "https://YOURORG.xdr.us.paloaltonetworks.com"
+    },
+    "cortexCaseDomain": {
+      "value": "security"
+    },
+    "jiraSiteUrl": {
+      "value": "https://yourorg.atlassian.net"
+    },
+    "jiraCloudId": {
+      "value": ""
+    },
+    "jiraEmail": {
+      "value": "your-service-account@yourorg.com"
+    },
+    "jiraApiToken": {
+      "value": "YOUR_JIRA_API_TOKEN"
+    },
+    "jiraProjectKey": {
+      "value": "SEC"
+    },
+    "jiraIssueType": {
+      "value": "Alert"
+    },
+    "jiraCaseIdField": {
+      "value": ""
+    },
+    "jiraIssueIdField": {
+      "value": ""
+    },
+    "jiraXdrUrlField": {
+      "value": ""
+    },
+    "syncIssues": {
+      "value": "false"
+    },
+    "syncFromDate": {
+      "value": ""
+    }
+  }
+}

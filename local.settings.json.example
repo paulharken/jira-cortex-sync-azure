@@ -1,0 +1,31 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "AZURE_STORAGE_CONNECTION_STRING": "UseDevelopmentStorage=true",
+    "STATE_CONTAINER_NAME": "cortex-jira-sync",
+
+    "CORTEX_BASE_URL": "https://api-YOURORG.xdr.us.paloaltonetworks.com",
+    "CORTEX_API_KEY": "your-cortex-api-key",
+    "CORTEX_API_KEY_ID": "your-cortex-key-id",
+    "CORTEX_CONSOLE_URL": "https://YOURORG.xdr.us.paloaltonetworks.com",
+    "CORTEX_CASE_DOMAIN": "security",
+
+    "JIRA_SITE_URL": "https://yourorg.atlassian.net",
+    "JIRA_CLOUD_ID": "",
+    "JIRA_EMAIL": "your-service-account@yourorg.com",
+    "JIRA_API_TOKEN": "your-jira-api-token",
+    "JIRA_PROJECT_KEY": "SEC",
+    "JIRA_ISSUE_TYPE": "Alert",
+    "JIRA_CASE_ID_FIELD": "",
+    "JIRA_ISSUE_ID_FIELD": "",
+    "JIRA_XDR_URL_FIELD": "",
+
+    "RESOLUTION_TYPE_MAP": "{\"False Positive\": \"Resolved - False Positive\", \"Duplicate\": \"Resolved - Duplicate Case\", \"Known Issue\": \"Resolved - Known Issue\", \"Security Testing\": \"Resolved - Security Testing\", \"TP Malicious\": \"Resolved - TP Malicious\", \"TP Benign\": \"Resolved - TP Benign\", \"SPAM\": \"Resolved - SPAM or Marketing\"}",
+    "DEFAULT_RESOLUTION_TYPE": "Resolved - Other",
+    "MAX_SYNC_CASES": "0",
+    "SYNC_ISSUES": "false",
+    "SYNC_FROM_DATE": ""
+  }
+}
