@@ -12,6 +12,16 @@ from .log import get_logger
 logger = get_logger()
 
 
+def _jql_escape(value: str) -> str:
+    """Escape a value for safe interpolation into a JQL string.
+
+    JQL uses backslash escaping inside double-quoted strings:
+    - Double quote -> \\"
+    - Backslash -> \\\\
+    """
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
 class JiraClient:
     def __init__(self, config: Config):
         if config.jira_cloud_id:
@@ -93,9 +103,9 @@ class JiraClient:
 
     def search_closed_alerts(self, updated_since: str) -> list[dict]:
         jql = (
-            f'project = "{self.project_key}" '
-            f'AND issuetype = "{self.issue_type}" '
-            f'AND status changed to "Closed" AFTER "{updated_since}"'
+            f'project = "{_jql_escape(self.project_key)}" '
+            f'AND issuetype = "{_jql_escape(self.issue_type)}" '
+            f'AND status changed to "Closed" AFTER "{_jql_escape(updated_since)}"'
         )
         url = f"{self.base_url}/rest/api/3/search/jql"
         body = {"jql": jql, "fields": ["key", "status", "updated"]}
@@ -155,7 +165,7 @@ class JiraClient:
             jql_field = f"cf[{cf_num}]"
         else:
             jql_field = f'"{field_id}"'
-        jql = f'project = "{self.project_key}" AND {jql_field} = "{value}"'
+        jql = f'project = "{_jql_escape(self.project_key)}" AND {jql_field} = "{_jql_escape(value)}"'
         url = f"{self.base_url}/rest/api/3/search/jql"
         body = {"jql": jql, "fields": ["key"], "maxResults": 1}
         resp = self._request("POST", url, json=body)
@@ -180,8 +190,8 @@ class JiraClient:
 
     def search_user(self, email: str) -> Optional[str]:
         """Search for a Jira user by email. Returns accountId or None."""
-        url = f"{self.base_url}/rest/api/3/user/search?query={email}&maxResults=10"
-        resp = self._request("GET", url)
+        url = f"{self.base_url}/rest/api/3/user/search"
+        resp = self._request("GET", url, params={"query": email, "maxResults": "10"})
         resp.raise_for_status()
         for user in resp.json():
             if user.get("accountType") == "atlassian" and user.get("active", False):
