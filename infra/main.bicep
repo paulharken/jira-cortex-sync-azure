@@ -1,7 +1,8 @@
 // Cortex-Jira Sync Azure Function infrastructure
 // Deploys: Storage Account, Application Insights, Key Vault, Function App (Consumption)
 
-@description('Base name for all resources (lowercase, no special chars)')
+@description('Base name for all resources (lowercase, no special chars, max 18 chars)')
+@maxLength(18)
 param baseName string
 
 @description('Azure region for all resources')
@@ -67,7 +68,7 @@ param syncIssues string = 'false'
 param syncFromDate string = ''
 
 // --- Resource names ---
-var storageName = replace('${baseName}store', '-', '')
+var storageName = toLower(replace('${baseName}store', '-', ''))
 var functionAppName = '${baseName}-func'
 var appInsightsName = '${baseName}-insights'
 var keyVaultName = '${baseName}-kv'
@@ -156,6 +157,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
       appSettings: [
         { name: 'FUNCTIONS_EXTENSION_VERSION', value: '~4' }
         { name: 'FUNCTIONS_WORKER_RUNTIME', value: 'python' }
+        { name: 'AzureWebJobsFeatureFlags', value: 'EnableWorkerIndexing' }
         { name: 'AzureWebJobsStorage', value: 'DefaultEndpointsProtocol=https;AccountName=${storageName};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storageAccount.listKeys().keys[0].value}' }
         { name: 'AZURE_STORAGE_CONNECTION_STRING', value: 'DefaultEndpointsProtocol=https;AccountName=${storageName};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storageAccount.listKeys().keys[0].value}' }
         { name: 'STATE_CONTAINER_NAME', value: stateContainerName }
