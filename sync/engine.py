@@ -13,7 +13,7 @@ from .config import Config, MAX_RETRY_ATTEMPTS
 from .cortex_client import CortexClient
 from .jira_client import JiraClient
 from .log import get_logger
-from .state import get_state, save_state, prune_closed_records
+from .state import get_state, save_state, prune_closed_records, StateConflictError
 
 logger = get_logger()
 
@@ -600,30 +600,30 @@ def run_sync(config: Config, container: ContainerClient) -> dict:
     try:
         results["cortex_to_jira"] = sync_cortex_to_jira(cortex, jira, state, config)
     except Exception:
-        logger.error(f"Cortex->Jira sync failed: {traceback.format_exc()}")
-        results["cortex_to_jira"] = {"error": traceback.format_exc()}
+        logger.exception("Cortex->Jira sync failed")
+        results["cortex_to_jira"] = {"error": "Cortex->Jira sync failed"}
 
     # Phase 2: Check open cases (bidirectional closure, severity sync)
     try:
         results["open_case_check"] = check_open_cases(cortex, jira, state, config)
     except Exception:
-        logger.error(f"Open case check failed: {traceback.format_exc()}")
-        results["open_case_check"] = {"error": traceback.format_exc()}
+        logger.exception("Open case check failed")
+        results["open_case_check"] = {"error": "Open case check failed"}
 
     # Phase 3: Jira -> Cortex (closed alerts)
     try:
         results["jira_to_cortex"] = sync_jira_to_cortex(cortex, jira, state, config)
     except Exception:
-        logger.error(f"Jira->Cortex sync failed: {traceback.format_exc()}")
-        results["jira_to_cortex"] = {"error": traceback.format_exc()}
+        logger.exception("Jira->Cortex sync failed")
+        results["jira_to_cortex"] = {"error": "Jira->Cortex sync failed"}
 
     # Phase 4: Standalone issue sync (if enabled)
     if config.sync_issues:
         try:
             results["issue_sync"] = sync_issues_to_jira(cortex, jira, state, config)
         except Exception:
-            logger.error(f"Issue sync failed: {traceback.format_exc()}")
-            results["issue_sync"] = {"error": traceback.format_exc()}
+            logger.exception("Issue sync failed")
+            results["issue_sync"] = {"error": "Issue sync failed"}
     else:
         results["issue_sync"] = {"skipped": True}
 
@@ -632,8 +632,12 @@ def run_sync(config: Config, container: ContainerClient) -> dict:
     if pruned:
         logger.info(f"Pruned {pruned} closed records older than 7 days")
 
-    # Persist state
-    save_state(container, state)
+    # Persist state (with optimistic concurrency — another cycle may have written first)
+    try:
+        save_state(container, state)
+    except StateConflictError:
+        logger.warning("State conflict — another sync cycle wrote first, skipping save. Next cycle will re-read.")
+        results["state_conflict"] = True
 
     # Summary
     open_cases = sum(1 for r in state["sync_records"].values() if r["status"] == "open")
@@ -651,11 +655,19 @@ def run_sync(config: Config, container: ContainerClient) -> dict:
     return results
 
 
+def _safe_error_summary(e: Exception) -> str:
+    """Extract a safe error summary without leaking secrets or internals."""
+    # For HTTP errors, include the status code but not the full message
+    if hasattr(e, "response") and e.response is not None:
+        return f"HTTP {e.response.status_code}"
+    return type(e).__name__
+
+
 def test_connectivity(config: Config) -> dict:
     """Verify connectivity to both Cortex and Jira. Returns status dict."""
     errors = config.validate()
     if errors:
-        return {"status": "error", "message": f"Configuration errors: {'; '.join(errors)}"}
+        return {"status": "error", "message": "Configuration incomplete"}
 
     result = {"cortex": "unknown", "jira": "unknown"}
 
@@ -667,7 +679,8 @@ def test_connectivity(config: Config) -> dict:
         )
         result["cortex"] = f"ok ({len(cases)} non-resolved cases)"
     except Exception as e:
-        result["cortex"] = f"failed: {e}"
+        logger.exception("Cortex connectivity test failed")
+        result["cortex"] = f"failed ({_safe_error_summary(e)})"
 
     # Test Jira
     try:
@@ -678,7 +691,8 @@ def test_connectivity(config: Config) -> dict:
         user = resp.json()
         result["jira"] = f"ok (authenticated as {user.get('displayName', 'unknown')})"
     except Exception as e:
-        result["jira"] = f"failed: {e}"
+        logger.exception("Jira connectivity test failed")
+        result["jira"] = f"failed ({_safe_error_summary(e)})"
 
     result["status"] = "ok" if "ok" in result["cortex"] and "ok" in result["jira"] else "error"
     return result

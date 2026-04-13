@@ -78,10 +78,10 @@ def health(req: func.HttpRequest) -> func.HttpResponse:
             json.dumps(status, indent=2),
             mimetype="application/json",
         )
-    except Exception as e:
+    except Exception:
         logger.exception("Health check failed")
         return func.HttpResponse(
-            json.dumps({"status": "error", "message": str(e)}),
+            json.dumps({"status": "error", "message": "Internal error"}),
             status_code=500,
             mimetype="application/json",
         )
@@ -103,10 +103,10 @@ def manual_sync(req: func.HttpRequest) -> func.HttpResponse:
             json.dumps(results, indent=2, default=str),
             mimetype="application/json",
         )
-    except Exception as e:
+    except Exception:
         logger.exception("Manual sync failed")
         return func.HttpResponse(
-            json.dumps({"status": "error", "message": str(e)}),
+            json.dumps({"status": "error", "message": "Internal error"}),
             status_code=500,
             mimetype="application/json",
         )
@@ -129,10 +129,10 @@ def connectivity_test(req: func.HttpRequest) -> func.HttpResponse:
             status_code=status_code,
             mimetype="application/json",
         )
-    except Exception as e:
+    except Exception:
         logger.exception("Connectivity test failed")
         return func.HttpResponse(
-            json.dumps({"status": "error", "message": str(e)}),
+            json.dumps({"status": "error", "message": "Internal error"}),
             status_code=500,
             mimetype="application/json",
         )
