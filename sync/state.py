@@ -4,7 +4,8 @@ import json
 import os
 from datetime import datetime, timedelta, timezone
 
-from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
+from azure.core import MatchConditions
+from azure.core.exceptions import ResourceExistsError, ResourceModifiedError, ResourceNotFoundError
 from azure.storage.blob import ContainerClient
 
 from .config import CLOSED_RECORD_TTL_DAYS
@@ -85,14 +86,16 @@ def save_state(container: ContainerClient, state: dict) -> None:
             container.upload_blob(BLOB_NAME, data, overwrite=False)
         else:
             # Subsequent writes — only succeed if the blob hasn't changed since we read it
-            container.upload_blob(BLOB_NAME, data, overwrite=True, etag=etag, match_condition="IfMatch")
+            container.upload_blob(
+                BLOB_NAME, data, overwrite=True,
+                etag=etag, match_condition=MatchConditions.IfNotModified,
+            )
     except ResourceExistsError:
         # Another sync cycle created the blob between our read (not found) and write
         raise StateConflictError("State blob was created by another sync cycle during first run")
-    except Exception as e:
-        if hasattr(e, "status_code") and e.status_code == 412:
-            raise StateConflictError("State blob was modified by another sync cycle") from e
-        raise
+    except ResourceModifiedError:
+        # ETag mismatch — another sync cycle wrote to the blob since we read it
+        raise StateConflictError("State blob was modified by another sync cycle")
 
 
 def prune_closed_records(state: dict) -> int:
